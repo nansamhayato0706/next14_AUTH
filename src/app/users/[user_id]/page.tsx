@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { pool } from "@/lib/db";
 import { toWareki } from "@/lib/utils/date";
 import { UserRow } from "@/types/userTypes";
+import styles from "@/app/users/[user_id]/EditUserPage.module.css";
 
 // DBからユーザー1件を取得する関数
 async function getUser(user_id: string): Promise<UserRow | null> {
@@ -44,9 +45,9 @@ export default async function UserDetailPage({ params }: PageProps) {
   if (!user) return notFound();
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
-      <h1>ユーザー詳細</h1>
-      <div style={{ marginTop: "1rem" }}>
+    <main className={styles.main}>
+      <h1 className={styles.title}>ユーザー詳細</h1>
+      <div>
         <p>
           <strong>氏名:</strong> {user.last_name} {user.first_name}
         </p>
@@ -83,16 +84,7 @@ export default async function UserDetailPage({ params }: PageProps) {
       </div>
 
       <div style={{ marginTop: "2rem" }}>
-        <a
-          href={`/users/${user.user_id}/edit`}
-          style={{
-            background: "#2563eb",
-            color: "#fff",
-            padding: "0.5rem 1rem",
-            borderRadius: "8px",
-            textDecoration: "none",
-          }}
-        >
+        <a href={`/users/${user.user_id}/edit`} className={styles.button}>
           編集する
         </a>
       </div>
