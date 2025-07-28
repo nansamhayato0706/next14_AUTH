@@ -1,0 +1,5 @@
+node_modules フォルダを削除する場合:
+Remove-Item -Recurse -Force node_modules
+
+.next フォルダを削除する場合:
+Remove-Item -Recurse -Force .next
