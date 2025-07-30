@@ -1,0 +1,61 @@
+├─app
+│  │  favicon.ico
+│  │  globals.css
+│  │  layout.tsx
+│  │  page.tsx
+│  │  providers.tsx
+│  │  UsersPage.module.css
+│  │
+│  ├─api
+│  │  ├─auth
+│  │  │  ├─register
+│  │  │  │      route.ts
+│  │  │  │
+│  │  │  └─[...nextauth]
+│  │  │          route.ts
+│  │  │
+│  │  └─users
+│  │      │  route.ts
+│  │      │
+│  │      └─[user_id]
+│  │          │  route.ts
+│  │          │
+│  │          ├─payment-period
+│  │          │      route.ts
+│  │          │
+│  │          └─usage-fee
+│  │                  route.ts
+│  │
+│  ├─auth
+│  │  ├─login
+│  │  │      page.tsx
+│  │  │
+│  │  └─register
+│  │          page.tsx
+│  │
+│  └─users
+│      └─[user_id]
+│          │  EditPaymentPeriodPage.module.css
+│          │  EditUserPage.module.css
+│          │  page.tsx
+│          │
+│          ├─edit
+│          │      page.tsx
+│          │
+│          ├─payment-period
+│          │  └─edit
+│          │          page.tsx
+│          │
+│          └─usage-fee
+│              └─edit
+│                      page.tsx
+│
+├─lib
+│  │  auth.ts
+│  │  db.ts
+│  │
+│  └─utils
+│          date.ts
+│
+└─types
+        userTypes.ts
