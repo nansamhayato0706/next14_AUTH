@@ -27,13 +27,13 @@ export async function GET() {
           FROM payment_period
           WHERE user_id = u.user_id
         )
-      ORDER BY u.user_id ASC;
+      ORDER BY u.work_place ASC, u.user_id ASC;
       `
     );
 
     return NextResponse.json(rows);
   } catch (e) {
-    console.error(e);
+    console.error("ユーザー情報の取得に失敗:", e);
     return NextResponse.json({ error: "取得に失敗しました" }, { status: 500 });
   }
 }
