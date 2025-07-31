@@ -33,19 +33,6 @@ export default function UsersPage() {
 
   return (
     <main className={styles.main}>
-      {/* --- header --- */}
-      <div className={styles.header}>
-        <span>ログイン中: {session?.user?.email ?? "ゲストユーザー"}</span>
-        <button
-          className={styles.logout}
-          onClick={() => signOut({ callbackUrl: "/auth/login" })}
-        >
-          ログアウト
-        </button>
-      </div>
-
-      <h1 className={styles.heading}>ユーザー一覧</h1>
-
       {/* --- filters --- */}
       <div className={styles.filters}>
         {/* ステータス */}

@@ -21,3 +21,17 @@
     text-wrap: balance;
   }
 }
+/* src/app/globals.css に追加 */
+
+/* メインコンテンツのスタイル */
+.main-content {
+  min-height: calc(100vh - 60px); /* ナビゲーションの高さを引く */
+  margin: 0 auto;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
+}

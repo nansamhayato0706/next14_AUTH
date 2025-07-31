@@ -707,6 +707,7 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-bottom: none;
   padding: 20px 0 16px;
+  padding-bottom: 0 !important; /* ← ここを 0 に */
   border-radius: 0;
   position: relative;
 }
@@ -722,7 +723,7 @@
 
 /* 前月・次月ボタン */
 .datePickerWrapper :global(.react-datepicker__navigation) {
-  top: 12px;
+  top: 20px;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -953,4 +954,65 @@
     color: #90cdf4;
     border-color: #90cdf4;
   }
+}
+/* ─── 月・年セレクトを角丸に ──────────────────── */
+/* 月セレクト */
+.datePickerWrapper :global(select.react-datepicker__month-select) {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important; /* 角丸 (8px) */
+  padding: 4px 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.2s ease;
+  margin-bottom: 10px;
+  width: 60px;
+}
+
+/* 年セレクト */
+.datePickerWrapper :global(select.react-datepicker__year-select) {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.5rem !important;
+  padding: 4px 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.2s ease;
+  width: 60px;
+}
+
+.datePickerWrapper :global(select.react-datepicker__month-select:hover),
+.datePickerWrapper :global(select.react-datepicker__year-select:hover) {
+  border-color: #3b82f6 !important;
+}
+
+.datePickerWrapper :global(select.react-datepicker__month-select:focus),
+.datePickerWrapper :global(select.react-datepicker__year-select:focus) {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6 !important;
+}
+
+/* ダークモード */
+@media (prefers-color-scheme: dark) {
+  .datePickerWrapper :global(select.react-datepicker__month-select),
+  .datePickerWrapper :global(select.react-datepicker__year-select) {
+    background: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+  }
+}
+
+/* ─── カレンダー上部の月・年ラベルを非表示 ───────────── */
+.datePickerWrapper :global(.react-datepicker__current-month),
+.datePickerWrapper :global(.react-datepicker-year-header) {
+  display: none !important;
 }

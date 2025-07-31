@@ -1,26 +1,49 @@
-// /src/middleware.ts でも /middleware.ts でも OK
+import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
+import type { NextRequestWithAuth } from "next-auth/middleware";
 
-export default withAuth({
-  pages: { signIn: "/auth/login" },
-  callbacks: {
-    authorized({ token }) {
-      // token が無ければ未認証と判定
-      return !!token;
-    },
+export default withAuth(
+  function middleware(req: NextRequestWithAuth) {
+    const token = req.nextauth.token;
+    console.log("middleware token:", token);
+    const { pathname } = req.nextUrl;
+
+    // トップページアクセス時の処理
+    if (pathname === "/") {
+      if (token?.role === "admin") {
+        return NextResponse.next(); // 管理者はトップページへ
+      }
+
+      // 一般ユーザー → /users/home にパラメータ付きでリダイレクト
+      const t = token as { id?: string; email?: string; role?: string };
+
+      const phpUrl = new URL("/users/home", req.nextUrl.origin);
+      phpUrl.searchParams.set("email", t.email ?? "");
+      phpUrl.searchParams.set("id", t.id ?? "");
+      phpUrl.searchParams.set("role", t.role ?? "user");
+
+      return NextResponse.redirect(phpUrl);
+    }
+
+    return NextResponse.next();
   },
-});
+  {
+    callbacks: {
+      authorized({ token }) {
+        return !!token;
+      },
+    },
+    pages: {
+      signIn: "/auth/login",
+    },
+  }
+);
 
-/* ---- “どの URL を保護するか” ---- */
 export const config = {
   matcher: [
-    // ① API 全体
-    "/api/:path*",
-
-    // ② ルート / をピンポイントで追加
     "/",
-
-    // ③ それ以外のアプリページ
+    "/users/:path*",
+    "/api/:path*",
     "/((?!_next/static|_next/image|favicon.ico|auth/login|api/auth).*)",
   ],
 };

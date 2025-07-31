@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@jigyodan.or.jp");
-  const [password, setPassword] = useState("hanaziboo0706");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {

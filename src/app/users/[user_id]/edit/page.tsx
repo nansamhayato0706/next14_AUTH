@@ -3,15 +3,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import DatePicker from "react-datepicker";
+import { signOut } from "next-auth/react";
+import DatePicker, { registerLocale, setDefaultLocale } from "react-datepicker";
 import { parseISO, isValid, format as fmt } from "date-fns";
+import { ja } from "date-fns/locale";
 import { UserRow } from "@/types/userTypes";
 import styles from "@/app/users/[user_id]/EditUserPage.module.css";
 import "react-datepicker/dist/react-datepicker.css";
 
-/*──────────────────────────
-  共通ヘルパー
-──────────────────────────*/
+/*── カレンダー日本語化 ───────────────────────*/
+registerLocale("ja", ja);
+setDefaultLocale("ja");
+
+/*── 共通ヘルパー ───────────────────────────*/
 const NULL_DATES = ["0000-00-00", "1899-11-29", "1899-11-30"];
 const isNullDate = (v?: string | null) =>
   v ? NULL_DATES.some((d) => v.startsWith(d)) : false;
@@ -22,19 +26,26 @@ const toDate = (v?: string | null): Date | null => {
   return isValid(d) ? d : null;
 };
 
-/*──────────────────────────
-  React コンポーネント
-──────────────────────────*/
+/*── React コンポーネント ────────────────────*/
 export default function EditUserPage() {
   const router = useRouter();
   const { user_id } = useParams() as { user_id: string };
 
+  /*── ユーザー情報用 state ───────────────────*/
   const [form, setForm] = useState<Partial<UserRow> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  /* 取得 */
+  /*── パスワード変更用 state ─────────────────*/
+  const [pwdForm, setPwdForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [pwdSaving, setPwdSaving] = useState(false);
+
+  /*── ユーザー情報取得 ──────────────────────*/
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -50,14 +61,14 @@ export default function EditUserPage() {
     fetchUser();
   }, [user_id]);
 
-  /* 汎用入力チェンジ */
+  /*── 入力ハンドラ（汎用） ───────────────────*/
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => form && setForm({ ...form, [e.target.name]: e.target.value });
 
-  /* 保存 */
+  /*── ユーザー情報保存 ───────────────────────*/
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form) return;
@@ -77,16 +88,48 @@ export default function EditUserPage() {
     }
   };
 
+  /*── パスワード保存 ───────────────────────*/
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwdForm.newPassword.length < 8) {
+      alert("新しいパスワードは8文字以上にしてください");
+      return;
+    }
+    if (pwdForm.newPassword !== pwdForm.confirmPassword) {
+      alert("新しいパスワードが一致しません");
+      return;
+    }
+    setPwdSaving(true);
+    try {
+      const res = await fetch(`/api/users/${user_id}/password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pwdForm),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "変更に失敗しました");
+      alert("パスワードを変更しました。再ログインしてください。");
+      await signOut();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setPwdSaving(false);
+      setPwdForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    }
+  };
+
+  /*── ローディング／エラー表示 ──────────────*/
   if (loading) return <p className={styles.loading}>読み込み中...</p>;
   if (error || !form) return <p className={styles.error}>{error}</p>;
 
-  /*──────────── JSX ────────────*/
+  /*── JSX ───────────────────────────────────*/
   return (
     <main className={styles.main}>
       <h1 className={styles.title}>ユーザー情報編集</h1>
 
+      {/*================== ユーザー情報フォーム ==================*/}
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* ───────── 基本情報 ───────── */}
+        {/* ======== 基本情報 ======== */}
         <Section icon="👤" title="基本情報">
           <Grid>
             <Field label="姓" required>
@@ -144,8 +187,12 @@ export default function EditUserPage() {
                     })
                   }
                   className={styles.input}
-                  dateFormat="yyyy-MM-dd"
+                  dateFormat="yyyy年MM月dd日"
                   placeholderText="日付を選択"
+                  locale="ja"
+                  showMonthDropdown
+                  showYearDropdown
+                  dropdownMode="select"
                 />
               </div>
               {isNullDate(form.birthday) && (
@@ -155,7 +202,7 @@ export default function EditUserPage() {
           </Grid>
         </Section>
 
-        {/* ───────── 連絡先情報 ───────── */}
+        {/* ======== 連絡先情報 ======== */}
         <Section icon="📞" title="連絡先情報">
           <Grid>
             <Field label="メールアドレス">
@@ -218,9 +265,10 @@ export default function EditUserPage() {
           </Grid>
         </Section>
 
-        {/* ───────── 利用情報 ───────── */}
+        {/* ======== 利用情報 ======== */}
         <Section icon="🏢" title="利用情報">
           <Grid>
+            {/* （既存フィールドはそのまま） */}
             <Field label="受給者番号">
               <input
                 name="receiving_number"
@@ -265,15 +313,18 @@ export default function EditUserPage() {
                     })
                   }
                   className={styles.input}
-                  dateFormat="yyyy-MM-dd"
-                  placeholderText="日付"
+                  dateFormat="yyyy年MM月dd日"
+                  placeholderText="日付を選択"
+                  locale="ja"
+                  showMonthDropdown
+                  showYearDropdown
+                  dropdownMode="select"
                 />
               </div>
               {isNullDate(form.start_date) && (
                 <span className={styles.hint}>現在: 0000-00-00</span>
               )}
             </Field>
-
             <Field label="退所日">
               <div className={styles.datePickerWrapper}>
                 <DatePicker
@@ -285,14 +336,19 @@ export default function EditUserPage() {
                     })
                   }
                   className={styles.input}
-                  dateFormat="yyyy-MM-dd"
-                  placeholderText="日付"
+                  dateFormat="yyyy年MM月dd日"
+                  placeholderText="日付を選択"
+                  locale="ja"
+                  showMonthDropdown
+                  showYearDropdown
+                  dropdownMode="select"
                 />
               </div>
               {isNullDate(form.end_date) && (
                 <span className={styles.hint}>現在: 0000-00-00</span>
               )}
             </Field>
+            {/* ・・・以下、既存フィールドを省略せず貼り付け済み・・・ */}
             <Field label="物件グループ">
               <select
                 name="b_group_id"
@@ -354,7 +410,7 @@ export default function EditUserPage() {
           </Grid>
         </Section>
 
-        {/* ───────── サポート事業所 ───────── */}
+        {/* ======== サポート事業所 ======== */}
         <Section icon="🏛️" title="サポート事業所情報">
           <Grid>
             <Field label="事業所名">
@@ -384,7 +440,7 @@ export default function EditUserPage() {
           </Grid>
         </Section>
 
-        {/* ───────── 障がい情報 ───────── */}
+        {/* ======== 障がい情報 ======== */}
         <Section icon="🆔" title="障がい情報">
           <Grid>
             <Field label="障がい名等" full>
@@ -451,7 +507,7 @@ export default function EditUserPage() {
           </Grid>
         </Section>
 
-        {/* ───────── その他情報 ───────── */}
+        {/* ======== その他情報 ======== */}
         <Section icon="📝" title="その他情報">
           <Grid>
             <Field label="備考" full>
@@ -475,7 +531,7 @@ export default function EditUserPage() {
           </Grid>
         </Section>
 
-        {/* ───────── ボタン ───────── */}
+        {/* ======== ユーザー情報保存ボタン ======== */}
         <div className={styles.buttonGroup}>
           <button
             type="button"
@@ -490,13 +546,59 @@ export default function EditUserPage() {
           </button>
         </div>
       </form>
+
+      {/*================== パスワード変更フォーム ==================*/}
+      <Section icon="🔒" title="パスワード変更">
+        <form onSubmit={handlePasswordChange} className={styles.form}>
+          <Grid>
+            <Field label="現在のパスワード" required>
+              <input
+                type="password"
+                value={pwdForm.currentPassword}
+                onChange={(e) =>
+                  setPwdForm({ ...pwdForm, currentPassword: e.target.value })
+                }
+                className={styles.input}
+              />
+            </Field>
+            <Field label="新しいパスワード" required>
+              <input
+                type="password"
+                value={pwdForm.newPassword}
+                onChange={(e) =>
+                  setPwdForm({ ...pwdForm, newPassword: e.target.value })
+                }
+                className={styles.input}
+              />
+            </Field>
+            <Field label="新しいパスワード（確認）" required>
+              <input
+                type="password"
+                value={pwdForm.confirmPassword}
+                onChange={(e) =>
+                  setPwdForm({ ...pwdForm, confirmPassword: e.target.value })
+                }
+                className={styles.input}
+              />
+            </Field>
+          </Grid>
+
+          <div className={styles.buttonGroup}>
+            <button
+              type="submit"
+              className={styles.saveButton}
+              disabled={pwdSaving}
+            >
+              {pwdSaving ? "変更中..." : "パスワードを変更"}
+            </button>
+          </div>
+        </form>
+      </Section>
     </main>
   );
 }
 
-/*──────────────────────────
-  小コンポーネント
-──────────────────────────*/
+/*── 小コンポーネント ─────────────────────────*/
 const Section: React.FC<{
   icon: string;
   title: string;
