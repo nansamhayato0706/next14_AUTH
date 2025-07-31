@@ -17,7 +17,8 @@ export default withAuth(
       // 一般ユーザー → /users/home にパラメータ付きでリダイレクト
       const t = token as { id?: string; email?: string; role?: string };
 
-      const phpUrl = new URL("/users/home", req.nextUrl.origin);
+      const phpUrl = new URL("https://192.168.1.26/members/index.php");
+      // const phpUrl = new URL("/users/home", req.nextUrl.origin);
       phpUrl.searchParams.set("email", t.email ?? "");
       phpUrl.searchParams.set("id", t.id ?? "");
       phpUrl.searchParams.set("role", t.role ?? "user");
