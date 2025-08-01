@@ -1,71 +1,111 @@
 // src/app/center/page.tsx
-import { pool } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import Link from "next/link";
-import type { RowDataPacket } from "mysql2/promise";
+"use client";
+
+import { useState, useMemo } from "react";
+import useSWR from "swr";
+import debounce from "lodash.debounce";
 import type { CenterMember } from "@/types/centerMemberTypes";
 import styles from "./CenterMembersPage.module.css";
 
-// ───────────────────────────────────────────────
-// RowDataPacket を交差させて型エラーを回避
-type CenterMemberRow = CenterMember & RowDataPacket;
+/*───────────────────────────────────────────────
+  共通 fetcher
+───────────────────────────────────────────────*/
+const fetcher = async <T = unknown,>(url: string): Promise<T> => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}\n${text}`);
+  }
+  return res.json();
+};
 
-// DB からメンバー一覧を取得
-async function getCenterMembers(): Promise<CenterMember[]> {
-  const [rows] = await pool.query<CenterMemberRow[]>(
-    "SELECT * FROM center_members ORDER BY member_id"
-  );
-  return rows as CenterMember[];
-}
+export default function CenterMembersPage() {
+  /*────────── 検索フォームの状態 ──────────*/
+  const [keyword, setKeyword] = useState("");
+  const [disability, setDisability] = useState("");
 
-// ───────────────────────────────────────────────
-// ページ本体（デフォルトでサーバーコンポーネント）
-export default async function CenterMembersPage() {
-  // 未ログインなら /auth/login へリダイレクト
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/auth/login");
+  // 入力を 300 ms デバウンスして API 連発を防ぐ
+  const onChangeKeyword = debounce((v: string) => setKeyword(v), 300);
 
-  // データ取得
-  const members = await getCenterMembers();
+  /*────────── SWR キー(URL)を生成 ──────────*/
+  const url = useMemo(() => {
+    const sp = new URLSearchParams();
+    sp.set("q", keyword);
+    sp.set("disability", disability);
+    return `/api/center-members?${sp.toString()}`;
+  }, [keyword, disability]);
+
+  /*────────── データ取得 ─────────────────*/
+  const {
+    data = [], // fallbackData を空配列扱い
+    error,
+    isLoading,
+  } = useSWR<CenterMember[], Error>(url, fetcher, {
+    keepPreviousData: true,
+  });
+
+  /*────────── UI 分岐 ────────────────────*/
+  if (error) return <pre className={styles.error}>エラー: {error.message}</pre>;
+  if (isLoading) return <p className={styles.loading}>読み込み中...</p>;
 
   return (
     <main className={styles.main}>
-      <h1 className={styles.title}>センターメンバー一覧</h1>
+      <h1 className={styles.title}>センターメンバー検索</h1>
 
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>氏名</th>
-            <th>住所</th>
-            <th>電話</th>
-            <th>携帯</th>
-            <th>誕生日</th>
-            <th>障害区分</th>
-            <th>更新日時</th>
-          </tr>
-        </thead>
+      {/* --- 検索フォーム --- */}
+      <div className={styles.filters}>
+        <input
+          className={styles.input}
+          type="text"
+          placeholder="氏名・住所など"
+          onChange={(e) => onChangeKeyword(e.target.value)}
+        />
+        <select
+          className={styles.select}
+          value={disability}
+          onChange={(e) => setDisability(e.target.value)}
+        >
+          <option value="">区分を選択</option>
+          <option value="身体">身体</option>
+          <option value="知的">知的</option>
+          <option value="精神">精神</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
 
-        <tbody>
-          {members.map((m) => (
-            <tr key={m.member_id}>
-              <td>{m.member_id}</td>
-              <td>
-                {/* 詳細ページを用意する場合はリンクに */}
-                <Link href={`/center/${m.member_id}`}>{m.name}</Link>
-              </td>
-              <td>{m.address ?? "-"}</td>
-              <td>{m.tel ?? "-"}</td>
-              <td>{m.mobile_phone ?? "-"}</td>
-              <td>{m.birthday ?? "-"}</td>
-              <td>{m.type_of_disability}</td>
-              <td>{m.updated_at}</td>
+      {/* --- 検索結果 --- */}
+      {data.length === 0 ? (
+        <p className={styles.empty}>該当なし</p>
+      ) : (
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>氏名</th>
+              <th>住所</th>
+              <th>電話</th>
+              <th>携帯</th>
+              <th>誕生日</th>
+              <th>障害区分</th>
+              <th>更新日時</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((m) => (
+              <tr key={m.member_id}>
+                <td>{m.member_id}</td>
+                <td>{m.name}</td>
+                <td>{m.address || "-"}</td>
+                <td>{m.tel || "-"}</td>
+                <td>{m.mobile_phone || "-"}</td>
+                <td>{m.birthday || "-"}</td>
+                <td>{m.type_of_disability || "-"}</td>
+                <td>{m.updated_at}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </main>
   );
 }
