@@ -2,7 +2,7 @@
 import Credentials from "next-auth/providers/credentials";
 import { type AuthOptions } from "next-auth";
 import { pool } from "./db"; // ← src/lib/db.ts
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 // DB から取得するユーザー型（必要最低限）
 type DbUser = {
